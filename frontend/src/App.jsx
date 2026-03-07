@@ -12,7 +12,18 @@ function App() {
       .catch(console.error)
   }, [])
 
-  return <div><h1>Fruit List</h1><p>{fruits.length} items loaded</p></div>
+  return (
+    <div>
+      <h1>Fruit List</h1>
+      <ul>
+        {fruits.map(f => (
+          <li key={f.name}>
+            <strong>{f.name}</strong> — {f.color} — {f.in_season ? 'In Season' : 'Out of Season'}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 export default App
