@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 
-const API = 'http://localhost:8000'
+const API = 'http://localhost:8080'
 
 function App() {
   const [fruits, setFruits] = useState([])
+
   const [filters, setFilters] = useState(() => {
     const p = new URLSearchParams(window.location.search)
     return {
@@ -18,7 +19,9 @@ function App() {
     if (filters.name) qs.set('name', filters.name)
     if (filters.color) qs.set('color', filters.color)
     if (filters.in_season !== '') qs.set('in_season', filters.in_season)
+
     window.history.replaceState(null, '', `?${qs.toString()}`)
+
     fetch(`${API}/fruit?${qs.toString()}`)
       .then(r => r.json())
       .then(setFruits)
@@ -30,12 +33,28 @@ function App() {
   return (
     <div>
       <h1>Fruit List</h1>
+
       <div>
-        <label>Name:{' '}<input value={filters.name} onChange={e => update('name', e.target.value)} placeholder="Search by name..." /></label>
+        <label>
+          Name:{' '}
+          <input
+            value={filters.name}
+            onChange={e => update('name', e.target.value)}
+            placeholder="Search by name..."
+          />
+        </label>
         {' '}
-        <label>Color:{' '}<input value={filters.color} onChange={e => update('color', e.target.value)} placeholder="e.g. red" /></label>
+        <label>
+          Color:{' '}
+          <input
+            value={filters.color}
+            onChange={e => update('color', e.target.value)}
+            placeholder="e.g. red"
+          />
+        </label>
         {' '}
-        <label>In Season:{' '}
+        <label>
+          In Season:{' '}
           <select value={filters.in_season} onChange={e => update('in_season', e.target.value)}>
             <option value="">All</option>
             <option value="true">Yes</option>
@@ -43,6 +62,7 @@ function App() {
           </select>
         </label>
       </div>
+
       <ul>
         {fruits.map(f => (
           <li key={f.name}>
@@ -50,6 +70,7 @@ function App() {
           </li>
         ))}
       </ul>
+
       {fruits.length === 0 && <p>No fruit found.</p>}
     </div>
   )

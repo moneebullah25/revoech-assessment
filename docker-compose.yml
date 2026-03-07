@@ -19,13 +19,22 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    ports:
-      - "8000:8000"
     environment:
       DATABASE_URL: postgresql://postgres:password@db:5432/fruit_db
     depends_on:
       db:
         condition: service_healthy
+    # No host port — traffic enters only through nginx
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - backend
 
   frontend:
     build:
@@ -34,7 +43,8 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      - nginx
 
 volumes:
   pgdata:
+  nginx_cache:
