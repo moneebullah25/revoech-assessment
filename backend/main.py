@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import psycopg2
 import json
+import time
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
@@ -13,7 +14,14 @@ def get_conn():
 
 @app.on_event("startup")
 def seed_db():
-    conn = get_conn()
+    for _ in range(10):
+        try:
+            conn = get_conn()
+            break
+        except psycopg2.OperationalError:
+            time.sleep(1)
+    else:
+        raise RuntimeError("Could not connect to database")
     cur = conn.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS fruit (
