@@ -52,20 +52,17 @@ def list_fruit(
 ):
     conn = get_conn()
     cur = conn.cursor()
-    query = "SELECT name, color, in_season FROM fruit"
+    query = "SELECT name, color, in_season FROM fruit WHERE 1=1"
     params = []
-    conditions = []
     if color:
-        conditions.append("color = %s")
+        query += " AND color = %s"
         params.append(color)
     if in_season is not None:
-        conditions.append("in_season = %s")
+        query += " AND in_season = %s"
         params.append(in_season)
     if name:
-        conditions.append("LOWER(name) LIKE %s")
+        query += " AND LOWER(name) LIKE %s"
         params.append(f"%{name.lower()}%")
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
     cur.execute(query, params)
     rows = cur.fetchall()
     cur.close()
