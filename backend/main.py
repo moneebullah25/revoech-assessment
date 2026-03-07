@@ -76,8 +76,8 @@ async def list_fruit(
     i = 1
 
     if color:
-        query += f" AND color = ${i}"
-        params.append(color)
+        query += f" AND LOWER(color) LIKE ${i}"
+        params.append(f"%{color.lower()}%")
         i += 1
     if in_season is not None:
         query += f" AND in_season = ${i}"
