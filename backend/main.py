@@ -45,13 +45,24 @@ def seed_db():
     conn.close()
 
 @app.get("/fruit")
-def list_fruit(color: Optional[str] = None):
+def list_fruit(
+    color: Optional[str] = None,
+    in_season: Optional[bool] = None,
+):
     conn = get_conn()
     cur = conn.cursor()
+    query = "SELECT name, color, in_season FROM fruit"
+    params = []
+    conditions = []
     if color:
-        cur.execute("SELECT name, color, in_season FROM fruit WHERE color = %s", (color,))
-    else:
-        cur.execute("SELECT name, color, in_season FROM fruit")
+        conditions.append("color = %s")
+        params.append(color)
+    if in_season is not None:
+        conditions.append("in_season = %s")
+        params.append(in_season)
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+    cur.execute(query, params)
     rows = cur.fetchall()
     cur.close()
     conn.close()
