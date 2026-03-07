@@ -1,71 +1,93 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-import psycopg2
+from contextlib import asynccontextmanager
+from typing import Optional
+import asyncio
 import json
 import os
-import time
-from typing import Optional
 
-app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
+import asyncpg
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/fruit_db")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql://postgres:password@localhost:5432/fruit_db"
+)
 
-def get_conn():
-    return psycopg2.connect(DATABASE_URL)
+pool: asyncpg.Pool = None
 
-@app.on_event("startup")
-def seed_db():
-    for _ in range(10):
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global pool
+    for attempt in range(10):
         try:
-            conn = get_conn()
+            pool = await asyncpg.create_pool(
+                DATABASE_URL,
+                min_size=5,
+                max_size=20,
+                command_timeout=30,
+            )
             break
-        except psycopg2.OperationalError:
-            time.sleep(1)
-    else:
-        raise RuntimeError("Could not connect to database after 10 attempts")
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS fruit (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL,
-            color TEXT NOT NULL,
-            in_season BOOLEAN NOT NULL
-        )
-    """)
-    cur.execute("SELECT COUNT(*) FROM fruit")
-    if cur.fetchone()[0] == 0:
-        with open("fruitList.json") as f:
-            fruits = json.load(f)
-        cur.executemany(
-            "INSERT INTO fruit (name, color, in_season) VALUES (%s, %s, %s)",
-            [(fr["name"], fr["color"], fr["in_season"]) for fr in fruits],
-        )
-    conn.commit()
-    cur.close()
-    conn.close()
+        except Exception:
+            if attempt == 9:
+                raise
+            await asyncio.sleep(1)
+
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS fruit (
+                id     SERIAL PRIMARY KEY,
+                name   TEXT NOT NULL UNIQUE,
+                color  TEXT NOT NULL,
+                in_season BOOLEAN NOT NULL
+            )
+        """)
+        count = await conn.fetchval("SELECT COUNT(*) FROM fruit")
+        if count == 0:
+            with open("fruitList.json") as f:
+                fruits = json.load(f)
+            await conn.executemany(
+                "INSERT INTO fruit (name, color, in_season) VALUES ($1, $2, $3)"
+                " ON CONFLICT (name) DO NOTHING",
+                [(fr["name"], fr["color"], fr["in_season"]) for fr in fruits],
+            )
+
+    yield
+    await pool.close()
+
+
+app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/fruit")
-def list_fruit(
+async def list_fruit(
     color: Optional[str] = None,
     in_season: Optional[bool] = None,
     name: Optional[str] = None,
 ):
-    conn = get_conn()
-    cur = conn.cursor()
     query = "SELECT name, color, in_season FROM fruit WHERE 1=1"
-    params = []
+    params: list = []
+    i = 1
+
     if color:
-        query += " AND color = %s"
+        query += f" AND color = ${i}"
         params.append(color)
+        i += 1
     if in_season is not None:
-        query += " AND in_season = %s"
+        query += f" AND in_season = ${i}"
         params.append(in_season)
+        i += 1
     if name:
-        query += " AND LOWER(name) LIKE %s"
+        query += f" AND LOWER(name) LIKE ${i}"
         params.append(f"%{name.lower()}%")
-    cur.execute(query, params)
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return [{"name": r[0], "color": r[1], "in_season": r[2]} for r in rows]
+
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(query, *params)
+
+    return [{"name": r["name"], "color": r["color"], "in_season": r["in_season"]} for r in rows]
