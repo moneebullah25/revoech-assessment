@@ -48,6 +48,7 @@ def seed_db():
 def list_fruit(
     color: Optional[str] = None,
     in_season: Optional[bool] = None,
+    name: Optional[str] = None,
 ):
     conn = get_conn()
     cur = conn.cursor()
@@ -60,6 +61,9 @@ def list_fruit(
     if in_season is not None:
         conditions.append("in_season = %s")
         params.append(in_season)
+    if name:
+        conditions.append("LOWER(name) LIKE %s")
+        params.append(f"%{name.lower()}%")
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
     cur.execute(query, params)
