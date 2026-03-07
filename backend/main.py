@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import psycopg2
 import json
 import time
+from typing import Optional
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
@@ -44,10 +45,13 @@ def seed_db():
     conn.close()
 
 @app.get("/fruit")
-def list_fruit():
+def list_fruit(color: Optional[str] = None):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT name, color, in_season FROM fruit")
+    if color:
+        cur.execute("SELECT name, color, in_season FROM fruit WHERE color = %s", (color,))
+    else:
+        cur.execute("SELECT name, color, in_season FROM fruit")
     rows = cur.fetchall()
     cur.close()
     conn.close()
