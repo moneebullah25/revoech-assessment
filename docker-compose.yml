@@ -15,5 +15,17 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/fruit_db
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:
