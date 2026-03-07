@@ -2,13 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import psycopg2
 import json
+import os
 import time
 from typing import Optional
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
 
-DATABASE_URL = "postgresql://postgres:password@localhost:5432/fruit_db"
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/fruit_db")
 
 def get_conn():
     return psycopg2.connect(DATABASE_URL)
@@ -22,7 +23,7 @@ def seed_db():
         except psycopg2.OperationalError:
             time.sleep(1)
     else:
-        raise RuntimeError("Could not connect to database")
+        raise RuntimeError("Could not connect to database after 10 attempts")
     cur = conn.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS fruit (
