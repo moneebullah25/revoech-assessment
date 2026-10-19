@@ -16,7 +16,7 @@ docker compose up --build
 
 - Frontend: http://localhost:3000
 - API (via nginx): http://localhost:8080/fruit (Swagger at http://localhost:8080/docs)
-- Postgres is also published on host port 5432; stop any local Postgres first.
+- Postgres is published on 127.0.0.1:5432 only; stop any local Postgres first.
 
 Frontend dev server (needs the stack above running, since `App.jsx` calls `http://localhost:8080`):
 
@@ -42,6 +42,10 @@ Example: `/fruit?color=red&in_season=true`. Responses are cached by nginx for 10
 - `autoscaler.py`: scales the `backend` service between 2 and 10 replicas from `docker stats` CPU (`python autoscaler.py`, stack running).
 - `stress-test.sh`: autocannon load phases against nginx, reports saved in `stress-results/`.
 - Design notes: [APPROACH.md](APPROACH.md).
+
+## License
+
+MIT, see [LICENSE](LICENSE).
 
 ## Original challenge brief
 
