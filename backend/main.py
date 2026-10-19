@@ -12,6 +12,12 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://postgres:password@localhost:5432/fruit_db"
 )
 
+CORS_ORIGINS = [
+    o.strip()
+    for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 pool: asyncpg.Pool = None
 
 
@@ -59,7 +65,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
